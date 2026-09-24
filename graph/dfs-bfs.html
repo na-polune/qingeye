@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DFS & BFS</title>
+<style>
+:root{--foreground:#18212b;--background:#fff;--border:#b8c2cc;--muted:#edf1f5;--viz-series-1:#16726b;color:var(--foreground);background:var(--background);font:17px/1.5 system-ui,sans-serif}
+body{max-width:1200px;margin:32px auto;padding:0 24px}
+h2,h3{font-weight:600;margin:12px 0}
+h2{font-size:1.5rem}h3{font-size:1.1rem}
+button{font:inherit;padding:8px 16px;border:1px solid var(--border);border-radius:6px;background:var(--background);color:inherit;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+.btn-primary{background:var(--foreground);color:var(--background)}
+.viz-controls,.viz-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.text-small{font-size:.85rem}pre{font-size:1rem}code{font-family:ui-monospace,Consolas,monospace}
+@media(prefers-color-scheme:dark){:root{--foreground:#e3e9ed;--background:#171c22;--border:#606e7b;--muted:#29333e;--viz-series-1:#68cec1}}
+@media(max-width:600px){body{margin:16px auto;padding:0 16px}}
+</style>
+<body>
+<div id="search-comparison">
+  <h2>Same tree. Two ways to explore.</h2>
+  <div class="viz-controls">
+    <button class="btn" data-action="back">Back</button>
+    <button class="btn btn-primary" data-action="next">Next step</button>
+    <button class="btn" data-action="play">Play</button>
+    <button class="btn btn-ghost" data-action="reset">Reset</button>
+    <span class="text-small tabular-nums" data-step></span>
+  </div>
+  <div class="search-panels">
+    <section data-kind="dfs"><h3>DFS · depth first</h3><div class="text-small">Deeper along one branch</div><svg role="img" aria-label="Depth first traversal"></svg><div class="text-small">Visited order</div><div class="order"></div><div class="text-small">Stack · next out on the left</div><div class="frontier"></div></section>
+    <section data-kind="bfs"><h3>BFS · breadth first</h3><div class="text-small">Across one level at a time</div><svg role="img" aria-label="Breadth first traversal"></svg><div class="text-small">Visited order</div><div class="order"></div><div class="text-small">Queue · front on the left</div><div class="frontier"></div></section>
+  </div>
+  <details><summary>Python input · this tree, with no cycles</summary><pre><code>tree = {
+    "A": ["B", "C"],
+    "B": ["D", "E"],
+    "C": ["F", "G"],
+    "D": [], "E": [],
+    "F": [], "G": [],
+}
+
+print(dfs(tree, "A"))
+print(bfs(tree, "A"))</code></pre></details>
+  <div class="viz-row text-small search-legend"><span>◎ Current</span><span>✓ Visited</span><span>Dashed circle: waiting</span></div>
+  <div class="text-small" data-detail aria-live="polite"></div>
+</div>
+<style>
+#search-comparison .search-panels{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:16px 0}
+#search-comparison section{min-width:0}
+#search-comparison svg{display:block;width:100%;height:245px;overflow:visible}
+#search-comparison svg text{fill:var(--foreground);font-weight:500}
+#search-comparison .order,#search-comparison .frontier{min-height:32px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 14px}
+#search-comparison .token{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;background:var(--muted);color:var(--foreground);border-radius:4px}
+#search-comparison .search-legend{margin:8px 0 12px}
+#search-comparison pre{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--foreground);background:transparent;margin:10px 0}
+#search-comparison .python-line{display:block;min-height:1em}
+#search-comparison .python-line.executed{background:color-mix(in srgb,var(--viz-series-1) 14%,transparent)}
+#search-comparison .python-state{min-height:2.5em}
+@media(max-width:760px){#search-comparison .search-panels{grid-template-columns:1fr;gap:16px}}
+</style>
+<script>
+(()=>{
+const root=document.getElementById('search-comparison');
+const children={A:['B','C'],B:['D','E'],C:['F','G'],D:[],E:[],F:[],G:[]};
+const edges=[['A','B'],['A','C'],['B','D'],['B','E'],['C','F'],['C','G']];
+function states(kind){let pending=['A'],visited=[],result=[{pending:[...pending],visited:[],current:null}];while(pending.length){const current=pending.shift();visited.push(current);if(kind==='dfs')pending.unshift(...children[current]);else pending.push(...children[current]);result.push({pending:[...pending],visited:[...visited],current});}return result;}
+const data={dfs:states('dfs'),bfs:states('bfs')};
+const python={
+dfs:[
+'def dfs(tree, start):',
+'    stack = [start]',
+'    order = []',
+'    while stack:',
+'        node = stack.pop()',
+'        order.append(node)',
+'        stack.extend(',
+'            reversed(tree[node])',
+'        )',
+'    return order'
+],
+bfs:[
+'from collections import deque',
+'',
+'def bfs(tree, start):',
+'    queue = deque([start])',
+'    order = []',
+'    while queue:',
+'        node = queue.popleft()',
+'        order.append(node)',
+'        queue.extend(tree[node])',
+'    return order'
+]};
+for(const kind of ['dfs','bfs']){
+const panel=root.querySelector('[data-kind="'+kind+'"]');
+const heading=document.createElement('h3');heading.textContent='Python · '+(kind==='dfs'?'last in, first out':'first in, first out');panel.append(heading);
+const pre=document.createElement('pre'),code=document.createElement('code');
+python[kind].forEach((line,index)=>{const span=document.createElement('span');span.className='python-line';span.dataset.line=index;span.textContent=line||' ';code.append(span);});pre.append(code);panel.append(pre);
+const status=document.createElement('div');status.className='python-state text-small';panel.append(status);
+}
+let step=0,timer=null;
+function stop(){clearInterval(timer);timer=null;root.querySelector('[data-action="play"]').textContent='Play';}
+function draw(){
+for(const kind of ['dfs','bfs']){
+const panel=root.querySelector('[data-kind="'+kind+'"]'),svg=panel.querySelector('svg'),s=data[kind][step];
+const w=panel.clientWidth||330;svg.setAttribute('viewBox','0 0 '+w+' 245');
+const positions={A:[w*.5,38],B:[w*.26,118],C:[w*.74,118],D:[w*.12,205],E:[w*.38,205],F:[w*.62,205],G:[w*.88,205]};
+let markup='<title>'+kind.toUpperCase()+': '+(s.visited.join(', ')||'ready')+'</title>';
+for(const [a,b] of edges){const p=positions[a],q=positions[b];markup+='<line x1="'+p[0]+'" y1="'+p[1]+'" x2="'+q[0]+'" y2="'+q[1]+'" stroke="var(--border)" stroke-width="2"/>';}
+for(const [node,p] of Object.entries(positions)){
+const visited=s.visited.includes(node),current=s.current===node,waiting=s.pending.includes(node);
+markup+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="21" fill="'+(visited?'color-mix(in srgb, var(--viz-series-1) 22%, var(--background))':'var(--background)')+'" stroke="'+(current?'var(--viz-series-1)':'var(--border)')+'" stroke-width="'+(current?3:1.5)+'" '+(waiting?'stroke-dasharray="4 3"':'')+'/>';
+if(current)markup+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="26" fill="none" stroke="var(--viz-series-1)"/>';
+markup+='<text x="'+p[0]+'" y="'+(p[1]+5)+'" text-anchor="middle">'+node+'</text>';
+if(visited)markup+='<text x="'+(p[0]+25)+'" y="'+(p[1]-22)+'" text-anchor="middle" class="text-small">'+(s.visited.indexOf(node)+1)+'✓</text>';
+}svg.innerHTML=markup;
+panel.querySelector('.order').textContent=s.visited.join(' → ')||'—';
+panel.querySelector('.frontier').innerHTML=s.pending.map(n=>'<span class="token">'+n+'</span>').join('')||'<span class="text-small">Empty</span>';
+const active=step===0?(kind==='dfs'?[1,2]:[3,4]):(kind==='dfs'?[4,5,6,7,8]:[6,7,8]);
+panel.querySelectorAll('.python-line').forEach(line=>line.classList.toggle('executed',active.includes(Number(line.dataset.line))));
+const actual=kind==='dfs'?[...s.pending].reverse():s.pending;
+const list='['+actual.map(n=>'"'+n+'"').join(', ')+']';
+panel.querySelector('.python-state').textContent=(step===0?'Initialized': 'Loop completed for '+s.current)+' · '+(kind==='dfs'?'stack = '+list+' (top at right)':'queue = deque('+list+')');
+}
+root.querySelector('[data-step]').textContent=step+' / 7 nodes visited';
+root.querySelector('[data-action="back"]').disabled=step===0;
+root.querySelector('[data-action="next"]').disabled=step===7;
+root.querySelector('[data-action="play"]').disabled=step===7;
+root.querySelector('[data-detail]').textContent=step===0?'Start at A · neighbors explored left to right.':step===7?'Complete · both searches visited every node in a different order.':'DFS visits '+data.dfs[step].current+' · BFS visits '+data.bfs[step].current+' · waiting lists shown after adding children.';
+}
+root.querySelector('[data-action="back"]').onclick=()=>{stop();step=Math.max(0,step-1);draw();};
+root.querySelector('[data-action="next"]').onclick=()=>{stop();step=Math.min(7,step+1);draw();};
+root.querySelector('[data-action="reset"]').onclick=()=>{stop();step=0;draw();};
+root.querySelector('[data-action="play"]').onclick=()=>{if(timer){stop();return;}root.querySelector('[data-action="play"]').textContent='Pause';timer=setInterval(()=>{step=Math.min(7,step+1);if(step===7)stop();draw();},1100);};
+new ResizeObserver(draw).observe(root);draw();
+})();
+</script>
+
+</body>
+</html>
