@@ -9,3 +9,5 @@ __pycache__/
 
 # Generated simulation output
 /cold-gas-landing/landing.png
+/cold-gas-landing/landing_2d.gif
+/cold-gas-landing/trajectory_2d.png
