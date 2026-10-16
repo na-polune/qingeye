@@ -1,0 +1,11 @@
+# Local Python environments
+.env/
+.venv/
+venv/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Generated simulation output
+/cold-gas-landing/landing.png
